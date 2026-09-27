@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Sales Floor: Topmate profile game</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#0e1a24;--card:#152534;--ink:#eef3f7;--muted:#95a7b6;--line:#26394a;--accent:#2ec4b6;--accent-ink:#06201d;--gold:#f6c453;--warn:#ff8a5b;--sel:#1e3d47}
+*{box-sizing:inherit}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.5;-webkit-user-select:none;user-select:none}
+main{max-width:600px;margin:0 auto;padding:22px 18px 60px;min-height:100%}
+h1{font-size:28px;font-weight:700;line-height:1.2;margin:0 0 10px}
+h2{font-size:22px;font-weight:600;margin:0 0 8px}
+p{margin:0 0 14px}.muted{color:var(--muted);font-size:15px}
+button{font:inherit;cursor:pointer}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:15px 24px;font-size:17px;font-weight:600;width:100%}
+.primary[disabled]{opacity:.45;cursor:default}
+input{font:inherit;width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);-webkit-user-select:text;user-select:text;margin-bottom:10px}
+/* HUD */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:14px;color:var(--muted)}
+.hud b{color:var(--ink);font-weight:600}
+.streak{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:600}
+.streak.hot{border-color:var(--gold);color:var(--gold)}
+.track{display:flex;gap:4px;margin:0 0 26px}
+.track i{flex:1;height:6px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.track i b{position:absolute;left:0;top:0;bottom:0;background:var(--accent);width:0;transition:width .3s}
+.track i.done b{background:var(--gold);width:100%}
+/* items */
+.q{font-size:22px;font-weight:500;line-height:1.4;margin:0 0 22px;min-height:62px}
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:block;width:100%;text-align:left;padding:15px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-size:16px;line-height:1.35;transition:transform .08s,border-color .12s,background .12s}
+.opt:active{transform:scale(.985)}
+.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opt[disabled]{opacity:.45;cursor:default}
+.opt.sel{background:var(--sel);border-color:var(--accent)}
+.likert{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.likert .opt{text-align:center;padding:16px 4px;font-size:13.5px;line-height:1.25}
+@media (max-width:440px){.likert{grid-template-columns:1fr}.likert .opt{text-align:left;padding:13px 14px;font-size:16px}}
+.hint{font-size:13px;color:var(--muted);margin-top:16px;display:flex;justify-content:space-between}
+/* timer */
+.ring{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;background:conic-gradient(var(--accent) var(--p,100%),var(--line) 0);position:relative}
+.ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--bg)}
+.ring span{position:relative;z-index:1}
+.ring.low{background:conic-gradient(var(--warn) var(--p,100%),var(--line) 0)}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 20px;margin:12px 0}
+.lvl{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}
+.lvl:last-child{border-bottom:0}
+.lvl .n{width:44px;height:44px;border-radius:12px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:18px}
+.lvl .n.done{background:var(--gold);color:#3b2a00;border-color:var(--gold)}
+.lvl .n.cur{border-color:var(--accent);color:var(--accent)}
+.lvl h3{margin:0 0 2px;font-size:17px;font-weight:600}.lvl p{margin:0;font-size:14px;color:var(--muted)}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.stat div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:24px;font-weight:700;color:var(--accent)}.stat span{font-size:12px;color:var(--muted)}
+.badge{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.badge:last-child{border-bottom:0}
+.badge i{width:40px;height:40px;border-radius:50%;background:var(--gold);color:#3b2a00;display:grid;place-items:center;font-style:normal;font-weight:700;flex:none}
+.badge i.off{background:var(--line);color:var(--muted)}
+.badge b{display:block;font-weight:600}.badge span{font-size:13px;color:var(--muted)}
+.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.94);opacity:0}100%{transform:scale(1);opacity:1}}
+.xp{position:fixed;right:18px;top:calc(env(safe-area-inset-top,0px) + 14px);background:var(--gold);color:#3b2a00;font-weight:700;padding:4px 10px;border-radius:999px;font-size:13px;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:none}
+.xp.show{opacity:1;transform:translateY(0)}
+code.tok{display:block;word-break:break-all;font-size:11px;line-height:1.4;padding:12px;background:var(--card);border-radius:8px;-webkit-user-select:all;user-select:all;font-family:ui-monospace,Menlo,Consolas,monospace}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div class="xp" id="xp">+10</div>
+<script>
+const L = [
+["p1","If I see something that can be fixed, I fix it without waiting to be asked."],
+["p2","I am constantly looking for better ways to reach my targets."],
+["p3","I tend to wait for my manager to tell me what to do next."],
+["p4","When something blocks me, I find a way around it rather than escalating and waiting."],
+["p5","I have started initiatives at work that nobody asked me to start."],
+["p6","I prefer to follow a proven process rather than try my own approach."],
+["p7","I spot opportunities before most people around me notice them."],
+["p8","I act on ideas quickly rather than thinking them over for a long time."],
+["a1","I set targets for myself that are higher than what is expected of me."],
+["a2","Hitting a target feels good for about a day, then I want the next one."],
+["a3","I am satisfied doing a reasonable job; I do not need to be the best."],
+["a4","I keep working on a goal even when the reward for it is uncertain."],
+["a5","I feel restless when I am not making measurable progress."],
+["a6","I would rather have a demanding role with big upside than a comfortable one with steady pay."],
+["a7","Closing a deal I was told was impossible is one of the best feelings I know."],
+["a8","I lose interest in a task once it becomes routine."],
+["c1","I enjoy competing against colleagues on a leaderboard."],
+["c2","I regularly check how my numbers compare with the top performer on the team."],
+["c3","Competition makes me perform better, not worse."],
+["c4","I do not care much whether I finish first or fifth as long as I did well."],
+["c5","I look for people better than me so I can learn how to beat them."],
+["c6","I would take a lower fixed salary for a higher variable component."],
+["c7","Competitive situations make me anxious rather than excited."],
+["c8","When a colleague wins big, my first reaction is to ask how they did it."],
+["y1","Winning matters more to me than how I win."],
+["y2","I find it hard to be glad when a colleague beats me."],
+["y3","Bending a rule a little is fine if it gets the deal done."],
+["y4","I sometimes keep useful information to myself so others do not gain an edge."],
+["y5","People who lose usually deserve to lose."],
+["y6","I would rather my team miss target than see someone else on it outscore me."],
+["g1","After ten rejections in a row, my energy on the eleventh call is the same as on the first."],
+["g2","Setbacks discourage me for days."],
+["g3","I have stayed focused on one difficult goal for over a year."],
+["g4","My interests change often, so I move from one project to another."],
+["g5","I take a no from a prospect as information, not as a judgement of me."],
+["g6","I finish what I start even after the initial excitement is gone."],
+["g7","I have bounced back from a month when I badly missed target and gone on to beat it."],
+["g8","When results are bad, I tend to reduce my activity rather than increase it."],
+["l1","My results depend mostly on what I do, not on the leads I am given."],
+["l2","Whether I hit target is largely out of my hands."],
+["l3","I can usually find a way to move a hesitant prospect."],
+["l4","Luck plays a bigger role in sales success than people admit."],
+["l5","Given a hard target, I am confident I will find a way to get there."],
+["o1","I often ask for feedback on my calls, even when it will be uncomfortable."],
+["o2","I would rather look competent than admit I am learning."],
+["o3","When I lose a deal, I break down exactly what went wrong before moving on."],
+["o4","I change my approach based on what worked and what did not last week."],
+["o5","I avoid tasks where I might look bad in front of others."],
+["s1","I have never been late for a commitment."],
+["s2","I have never told a small lie to avoid an awkward situation."],
+["s3","I always admit it immediately when I make a mistake."],
+["s4","I have never felt irritated by a customer."],
+["s5","I have never taken credit for something a colleague did."],
+["s6","I am always courteous, even to people who are rude to me."],
+["s7","I have never pretended to be busier than I was."],
+["s8","I always read the full terms before agreeing to anything."],
+["x1","To show you are reading carefully, choose Agree for this statement."],
+["x2","This is a check. Please select Strongly disagree."],
+["x3","For this statement only, choose Neither."],
+];const M = [
+["m1","I would rather spend an hour improving one rep's pitch than an hour closing a deal myself."],
+["m2","I listen to team members' call recordings on my own initiative, not only when there is a problem."],
+["m3","When a rep is struggling, my instinct is to take the lead over and close it myself."],
+["m4","I get real satisfaction from watching someone I trained beat my own numbers."],
+["m5","I hold people to the standard even when it makes me unpopular for a while."],
+["m6","I find it difficult to have a direct conversation with someone who is underperforming."],
+["m7","If the team misses target, I look first at what I failed to do, not at who let me down."],
+["m8","I would rather tolerate a mediocre performer than deal with the disruption of replacing them."],
+["m9","I still take calls or join deals myself when the team needs it, without seeing it as beneath the role."],
+["m10","I know the pipeline of every person on my team without opening the CRM."],
+["m11","Once I am a manager, I expect to stop doing the frontline work entirely."],
+["m12","I am at my best in the middle of the action, not reviewing dashboards from a distance."],
+["m13","My own leaderboard position matters less to me than the team's total."],
+["m14","I share my best techniques openly, even with people who might outscore me as a result."],
+["m15","I would be uncomfortable if a rep on my team became more respected than me."],
+["m16","I measure my success by how many people I have made better at the job."],
+];const FC = [
+["I push for the close even when it feels uncomfortable","I make sure the customer never feels pressured"],
+["I set my own targets above what is asked","I make sure I deliver exactly what was agreed"],
+["I keep going long after most people would stop","I know when to cut losses and move on"],
+["I check the leaderboard several times a day","I focus on my own work and ignore rankings"],
+["I would rather be the best on the team","I would rather the whole team does well"],
+["I change my pitch mid call when I sense it is not landing","I keep to the script because it was designed for a reason"],
+["When I miss target I increase my call volume","When I miss target I step back and plan carefully"],
+["I would rather have a big variable and a small fixed pay","I would rather have a predictable salary"],
+["I start conversations with prospects nobody assigned to me","I work only the leads I am accountable for"],
+["A rejection makes me want to call the next person immediately","A rejection makes me want to understand what I did wrong first"],
+];const SJ = [
+{q:"It is the 28th of the month. You are at 70 percent of target. Your manager is on leave and the two hottest leads in your pipeline have gone quiet after a demo. What do you do first?",
+ o:[["Call both quiet leads now, then work the next ten leads down the list before lunch."],["Send a follow up message to both and wait for a reply before deciding on next steps."],["Ask a senior colleague to review the demo recordings before you re contact them."],["Focus on fresh leads instead, since quiet leads after a demo rarely convert."]]},
+{q:"A colleague on the leaderboard asks you how you handle a specific price objection that you have become good at. They are 2 units behind you with three days left in the month.",
+ o:[["Share the approach fully. Their result does not change what you can do."],["Give a general answer and keep the specific line you use to yourself."],["Share it after the month closes."],["Offer to sit in on their next call and coach them live."]]},
+{q:"You have just had 14 consecutive calls end in a no or no answer. It is 4 pm.",
+ o:[["Take five minutes, listen to one of your own successful calls, then dial the next lead."],["Stop calling for the day and prepare better for tomorrow."],["Switch to sending WhatsApp messages instead, since calls are clearly not working today."],["Ask your manager whether the lead quality has changed."]]},
+{q:"A prospect is ready to pay but wants a discount the creator has not approved. The month closes tomorrow.",
+ o:[["Tell them the price is fixed, explain the value again, and ask what would make it worth full price to them."],["Promise the discount and sort it out with the creator afterwards."],["Offer a small extra like a bonus session that you know is within your authority."],["Let the deal slip to next month while you seek approval."]]},
+{q:"In your first week your manager gives you a script that you are sure has a weak opening.",
+ o:[["Run it as given for a set number of calls, track the drop off point, then propose a change with the numbers."],["Change the opening on your own from day one."],["Run it as given; new people should not change scripts."],["Tell your manager the opening is weak before making any calls."]]},
+];
+const LIKERT=["Strongly disagree","Disagree","Neither","Agree","Strongly agree"];
+const MIN_MS=900;           // answers before this are not accepted
+const FC_SECONDS=20;        // split decision countdown
+const ROUND=20;             // statements per round in level 1
+const XP={answer:10,round:50,level:150};
+const app=document.getElementById("app"),xpEl=document.getElementById("xp");
+const state={role:"agent",name:"",email:"",levels:[],lv:0,i:0,ans:{},lat:{},order:[],blur:0,start:0,t0:0,done:false,xp:0,streak:0,best:0,timer:null};
+window.addEventListener("blur",()=>{if(state.start&&!state.done){state.blur++;state.streak=0;}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.start&&!state.done){state.blur++;state.streak=0;}});
+document.addEventListener("contextmenu",e=>{if(state.start&&!state.done)e.preventDefault();});
+
+function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function gainXp(n){state.xp+=n;xpEl.textContent="+"+n;xpEl.classList.add("show");setTimeout(()=>xpEl.classList.remove("show"),700);}
+
+function build(){
+  const seed=Date.now()^Math.floor(Math.random()*1e9);const r=rng(seed);state.seed=seed;
+  const items=shuffle(L.concat(state.role==="manager"?M:[]).map(x=>({k:"L",id:x[0]})),r);
+  const rounds=[];for(let i=0;i<items.length;i+=ROUND)rounds.push(items.slice(i,i+ROUND));
+  // balance the last round so no round is tiny
+  if(rounds.length>1&&rounds[rounds.length-1].length<8){const last=rounds.pop();last.forEach((x,i)=>rounds[i%rounds.length].push(x));}
+  const fcs=shuffle(FC.map((p,i)=>({k:"F",id:"f"+i,flip:r()<0.5})),r);
+  const sjs=SJ.map((s,i)=>({k:"S",id:"j"+i,ord:shuffle([0,1,2,3],r)}));
+  state.levels=[
+   {name:"How you work",desc:"Quick reactions to statements about you. No right answers.",rounds},
+   {name:"Split decisions",desc:"Two good options, one pick, "+FC_SECONDS+" seconds each.",rounds:[fcs]},
+   {name:"On the floor",desc:"Five real situations from a Topmate sales month.",rounds:[sjs]}];
+  state.lv=0;state.rd=0;state.i=0;
+}
+const total=()=>state.levels.reduce((t,l)=>t+l.rounds.reduce((u,r)=>u+r.length,0),0);
+const answered=()=>state.order.length;
+
+function intro(){
+  if(location.hash.includes("manager"))state.role="manager";
+  app.innerHTML=`<h1>The Sales Floor</h1>
+  <p>Three levels, about ${state.role==="manager"?"18":"15"} minutes. You earn points for every answer and keep a focus streak for steady, attentive answering. Points are for finishing, not for what you answer: there are no right answers in levels 1 and 2, and level 3 is about judgement, not knowledge.</p>
+  <div class="card">${levelMap()}</div>
+  <div class="card"><p style="margin-bottom:8px"><strong>House rules</strong></p>
+  <p class="muted" style="margin-bottom:6px">Answer as you really are. The game can tell when someone describes an ideal instead of a person, and that costs more than any honest answer.</p>
+  <p class="muted" style="margin-bottom:6px">No going back. Each item appears once.</p>
+  <p class="muted" style="margin:0">Stay on this tab. Leaving resets your streak and is recorded.</p></div>
+  <input id="nm" autocomplete="off" placeholder="Your full name, as on your application">
+  <input id="em" autocomplete="off" inputmode="email" placeholder="Email (optional)">
+  <button class="primary" id="go" disabled>Start level 1</button>`;
+  const nm=document.getElementById("nm"),go=document.getElementById("go");
+  nm.addEventListener("input",()=>go.disabled=nm.value.trim().length<2);
+  go.onclick=()=>{state.name=nm.value.trim();state.email=document.getElementById("em").value.trim();build();state.start=Date.now();levelCard();};
+}
+function levelMap(){return state.levels.length?state.levels.map((l,i)=>`<div class="lvl"><div class="n ${i<state.lv?"done":i===state.lv?"cur":""}">${i<state.lv?"&#10003;":i+1}</div><div><h3>${l.name}</h3><p>${l.desc}</p></div></div>`).join(""):
+ [["How you work","Quick reactions to statements about you. No right answers."],["Split decisions","Two good options, one pick, "+FC_SECONDS+" seconds each."],["On the floor","Five real situations from a Topmate sales month."]].map((l,i)=>`<div class="lvl"><div class="n ${i===0?"cur":""}">${i+1}</div><div><h3>${l[0]}</h3><p>${l[1]}</p></div></div>`).join("");}
+
+function levelCard(){
+  const l=state.levels[state.lv];
+  app.innerHTML=`<div class="card pop"><p class="muted" style="margin-bottom:4px">Level ${state.lv+1} of 3</p><h2>${l.name}</h2><p>${l.desc}</p>${state.lv===1?`<p class="muted">The clock starts when each pair appears. If it runs out, the game moves on and the pair counts as skipped.</p>`:""}${state.lv===2?`<p class="muted">Pick what you would actually do first, not what sounds best. Take your time.</p>`:""}
+  <button class="primary" id="go">Begin</button></div>`;
+  document.getElementById("go").onclick=render;
+}
+function roundCard(){
+  const l=state.levels[state.lv];const more=state.rd<l.rounds.length-1;
+  gainXp(more?XP.round:XP.level);
+  app.innerHTML=`<div class="card pop"><p class="muted" style="margin-bottom:4px">${more?`Round ${state.rd+1} of ${l.rounds.length} done`:`Level ${state.lv+1} complete`}</p><h2>${more?"Keep it rolling":l.name+": cleared"}</h2>
+  <div class="stat"><div><b>${state.xp}</b><span>points</span></div><div><b>${state.best}</b><span>best streak</span></div><div><b>${Math.round(answered()/total()*100)}%</b><span>done</span></div></div>
+  <p class="muted">${state.blur?"Your streak resets when you leave the page. Stay with it.":"Steady pace so far. A streak grows when each answer gets real attention."}</p>
+  <button class="primary" id="go">${more?"Next round":state.lv<2?"Start level "+(state.lv+2):"See your result"}</button></div>`;
+  document.getElementById("go").onclick=()=>{if(more){state.rd++;state.i=0;render();}else if(state.lv<2){state.lv++;state.rd=0;state.i=0;levelCard();}else finish();};
+}
+
+function hud(){
+  const segs=state.levels.map((l,li)=>{const n=l.rounds.reduce((u,r)=>u+r.length,0);const done=li<state.lv?n:li>state.lv?0:l.rounds.slice(0,state.rd).reduce((u,r)=>u+r.length,0)+state.i;return`<i class="${done>=n?"done":""}"><b style="width:${Math.round(done/n*100)}%"></b></i>`;}).join("");
+  return`<div class="hud"><span>Level <b>${state.lv+1}</b> ${esc(state.levels[state.lv].name)}</span><span class="streak ${state.streak>=5?"hot":""}">${state.streak>=5?"&#9889;":"&#9679;"} ${state.streak}</span><span><b>${state.xp}</b> pts</span></div><div class="track">${segs}</div>`;
+}
+
+function render(){
+  const l=state.levels[state.lv],round=l.rounds[state.rd];
+  if(state.i>=round.length){roundCard();return;}
+  const it=round[state.i];let body="",timer="";
+  if(it.k==="L"){const item=L.concat(M).find(x=>x[0]===it.id);body=`<p class="q">${esc(item[1])}</p><div class="opts likert">${LIKERT.map((t,i)=>`<button class="opt" data-v="${i+1}">${t}</button>`).join("")}</div>`;}
+  else if(it.k==="F"){const p=FC[+it.id.slice(1)];const a=it.flip?[p[1],p[0]]:[p[0],p[1]];body=`<p class="q">Which is more true of you?</p><div class="opts">${a.map((t,i)=>`<button class="opt" data-v="${it.flip?(i===0?"b":"a"):(i===0?"a":"b")}">${esc(t)}</button>`).join("")}</div>`;timer=`<div class="ring" id="ring"><span>${FC_SECONDS}</span></div>`;}
+  else{const s=SJ[+it.id.slice(1)];body=`<p class="q">${esc(s.q)}</p><div class="opts">${it.ord.map(oi=>`<button class="opt" data-v="${oi}">${esc(s.o[oi][0])}</button>`).join("")}</div>`;}
+  app.innerHTML=`${hud()}${body}<div class="hint"><span>${state.i+1} of ${round.length} in this round</span>${timer}</div>`;
+  state.t0=performance.now();
+  const btns=[...app.querySelectorAll(".opt")];btns.forEach(b=>b.disabled=true);
+  setTimeout(()=>btns.forEach(b=>b.disabled=false),MIN_MS);
+  clearInterval(state.timer);
+  if(it.k==="F"){const ring=document.getElementById("ring");state.timer=setInterval(()=>{const left=FC_SECONDS-(performance.now()-state.t0)/1000;if(left<=0){clearInterval(state.timer);state.lat[it.id]=FC_SECONDS*1000;state.order.push(it.id);state.streak=0;state.i++;render();return;}ring.style.setProperty("--p",Math.round(left/FC_SECONDS*100)+"%");ring.querySelector("span").textContent=Math.ceil(left);if(left<5)ring.classList.add("low");},200);}
+  btns.forEach(b=>b.onclick=()=>{
+    const lat=Math.round(performance.now()-state.t0);if(lat<MIN_MS)return;
+    clearInterval(state.timer);b.classList.add("sel");btns.forEach(x=>x.disabled=true);
+    state.ans[it.id]=b.dataset.v;state.lat[it.id]=lat;state.order.push(it.id);
+    if(lat>=1400&&lat<=30000){state.streak++;state.best=Math.max(state.best,state.streak);}else state.streak=0;
+    gainXp(XP.answer);
+    setTimeout(()=>{state.i++;render();},170);
+  });
+}
+
+async function finish(){
+  state.done=true;clearInterval(state.timer);
+  const payload={v:2,n:state.name,e:state.email,r:state.role,seed:state.seed,t:Date.now()-state.start,b:state.blur,a:state.ans,l:state.lat,o:state.order,xp:state.xp,best:state.best};
+  const mins=Math.round(payload.t/60000);
+  const badges=[["Finisher","Completed all three levels",true],["Focused","A streak of 25 or more attentive answers",state.best>=25],["Steady hand","Never left the page",state.blur===0],["Decisive","No split decision left to the clock",FC.every((p,i)=>("f"+i) in state.ans)]];
+  const shell=(status)=>`<div class="card pop"><p class="muted" style="margin-bottom:4px">Game complete</p><h2>Well played, ${esc(state.name.split(" ")[0])}</h2>
+  <div class="stat"><div><b>${state.xp}</b><span>points</span></div><div><b>${state.best}</b><span>best streak</span></div><div><b>${mins}</b><span>minutes</span></div></div>
+  ${badges.map(b=>`<div class="badge"><i class="${b[2]?"":"off"}">${b[2]?"&#10003;":"&ndash;"}</i><div><b>${b[0]}</b><span>${b[1]}</span></div></div>`).join("")}
+  <div id="status" style="margin-top:14px">${status}</div>
+  <p class="muted" style="margin:14px 0 0">Your profile goes to the hiring panel alongside your interview. Nothing is decided on this game alone.</p></div>`;
+  app.innerHTML=shell(`<p class="muted">Saving your result</p>`);
+  try{const r=await fetch("/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const j=await r.json();if(!r.ok)throw new Error(j.error||"failed");
+    document.getElementById("status").innerHTML=`<p style="margin:0"><strong>Saved.</strong> Your reference is <strong>${j.ref}</strong>. You can close this page.</p>`;}
+  catch(e){const tok=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    document.getElementById("status").innerHTML=`<p><strong>Could not save automatically.</strong> Copy this code and send it to the person who shared the link.</p><code class="tok">${tok}</code>`;}
+}
+window.addEventListener("hashchange",()=>{if(!state.start)intro();});
+intro();
+</script>
+</body>
+</html>
