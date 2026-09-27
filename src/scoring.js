@@ -10,10 +10,10 @@ o1:["LG",0],o2:["LG",1],o3:["LG",0],o4:["LG",0],o5:["LG",1],
 s1:["SD",0],s2:["SD",0],s3:["SD",0],s4:["SD",0],s5:["SD",0],s6:["SD",0],s7:["SD",0],s8:["SD",0],
 m1:["CO",0],m2:["CO",0],m3:["CO",1],m4:["CO",0],m5:["SA",0],m6:["SA",1],m7:["SA",0],m8:["SA",1],
 m9:["HO",0],m10:["HO",0],m11:["HO",1],m12:["HO",0],m13:["TS",0],m14:["TS",0],m15:["TS",1],m16:["TS",0]};
-export const ATKEY = {x1:4,x2:1,x3:3};
+export const ATKEY = {x1:4,x2:1};
 export const CONS = [["p1","p3"],["a1","a3"],["l1","l2"],["g1","g8"],["o1","o2"]];
-export const FC_N = 10;
-export const SJKEY = [[2,0,1,0],[2,0,0,1],[2,0,1,0],[2,0,1,0],[2,1,0,0]];
+export const FC_N = 8;
+export const SJKEY = [[2,0,1,0],[2,0,0,1],[2,0,1,0],[2,0,1,0]];
 export const SCALES = {PA:"Proactive drive",AS:"Achievement striving",HC:"Healthy competitiveness",HY:"Hypercompetitiveness",GR:"Grit and resilience",LS:"Owns the outcome",LG:"Learns from losses",CO:"Coaching orientation",SA:"Standards and accountability",HO:"Hands on ownership",TS:"Team over self"};
 export const PLAIN = {PA:"acts without being told, creates opportunities",AS:"sets hard targets and chases them",HC:"enjoys competing and wants to win",HY:"must win at any cost, resents others winning",GR:"keeps effort steady through rejection",LS:"credits results to own effort, not leads or luck",LG:"seeks feedback and adapts",CO:"would rather make a rep better than close it themselves",SA:"holds the line on standards",HO:"stays in the action, knows every pipeline",TS:"team total matters more than own rank"};
 export const PROBES = {PA:"Tell me about something you changed at your last job that nobody asked you to change. What happened after?",AS:"What is the hardest target you ever hit, and what did you do differently in the last two weeks to get there?",HC:"Where did you rank on your last team, and how do you know?",GR:"Describe your worst month in sales. Walk me through what your activity looked like the week after.",LS:"Last quarter, what percentage of the result was you and what percentage was the leads or the market?",LG:"What is the last piece of critical feedback you got on a call, and what changed because of it?",CO:"Name a rep you made better. What exactly did you do, and what did their numbers do?",SA:"Tell me about the last underperformer you managed out or turned around. How long did it take you to act?",HO:"When was the last time you personally took a call for your team, and why?",TS:"Tell me about a time you shared a technique that then helped someone outscore you.",HY:"Tell me about a time a colleague beat you to a deal. What did you do next?"};
@@ -24,12 +24,14 @@ export function score(d){
   const a=d.a||{}, lat=d.l||{}; const sc={}, raw={};
   for(const id of Object.keys(KEY)){ if(!(id in a)) continue; const [s,rev]=KEY[id]; let v=+a[id]; if(!(v>=1&&v<=5)) continue; raw[id]=v; if(rev) v=6-v; (sc[s]=sc[s]||[]).push(v); }
   const scales={}; for(const k of Object.keys(sc)) if(k!=="SD") scales[k]=+mean(sc[k]).toFixed(2);
+  const sdTotal=(sc.SD||[]).length;
   const sd=(sc.SD||[]).filter(v=>v===5).length;
   const isMgr=d.r==="manager";
   const compKeys=(isMgr?["PA","AS","GR","LS","LG","CO","SA","HO","TS"]:["PA","AS","HC","GR","LS","LG"]).filter(k=>k in scales);
   const comp=+mean(compKeys.map(k=>scales[k])).toFixed(2);
   let fc=0, fcMissing=0; for(let i=0;i<FC_N;i++){ if(a["f"+i]==="a") fc++; else if(!(("f"+i) in a)) fcMissing++; }
   const sj=SJKEY.reduce((t,k,i)=>t+((("j"+i) in a)?(k[+a["j"+i]]||0):0),0);
+  const atTotal=Object.keys(ATKEY).filter(k=>k in a).length;
   const at=Object.keys(ATKEY).filter(k=>k in a&&+a[k]!==ATKEY[k]).length;
   const cons=CONS.filter(([x,y])=>raw[x]>=4&&raw[y]>=4).length;
   const seqL=(d.o||[]).filter(id=>id in raw).map(id=>raw[id]);
@@ -38,11 +40,11 @@ export function score(d){
   const lats=Object.values(lat).map(Number).filter(n=>n>0).sort((x,y)=>x-y); const med=lats[Math.floor(lats.length/2)]||0;
   const compN=(comp-1)/4, fcN=fc/FC_N, gap=+(compN-fcN).toFixed(2);
   const flags=[];
-  if(at>0) flags.push([at>=2?"bad":"warn",`Missed ${at} of 3 attention checks (statements that said which answer to pick).`]);
+  if(at>0) flags.push([at>=2?"bad":"warn",`Missed ${at} of ${atTotal} attention checks (statements that said which answer to pick).`]);
   if(cons>=2) flags.push(["bad",`Gave contradictory answers on ${cons} pairs of opposite statements. Suggests random or careless responding.`]); else if(cons===1) flags.push(["warn","One contradictory answer pair."]);
-  if(sd>=6) flags.push(["bad",`Claimed to be perfect on ${sd} of 8 statements almost nobody is perfect on (never late, never irritated, and so on). The trait scores are inflated.`]); else if(sd>=4) flags.push(["warn",`Claimed perfection on ${sd} of 8 near impossible statements. Some inflation likely.`]);
+  if(sdTotal&&sd/sdTotal>=0.75) flags.push(["bad",`Claimed to be perfect on ${sd} of ${sdTotal} statements almost nobody is perfect on (never late, never irritated, and so on). The trait scores are inflated.`]); else if(sdTotal&&sd/sdTotal>=0.5) flags.push(["warn",`Claimed perfection on ${sd} of ${sdTotal} near impossible statements. Some inflation likely.`]);
   if(gap>=0.3) flags.push(["bad","Rated themselves far higher on the statements than their forced choices show. Classic sign of answering to the ideal."]); else if(gap>=0.18) flags.push(["warn","Self ratings run ahead of forced choices. Mild inflation."]);
-  if(fcMissing>=3) flags.push(["warn",`Let ${fcMissing} timed choices expire without answering.`]);
+  if(fcMissing>=2) flags.push(["warn",`Let ${fcMissing} timed choices expire without answering.`]);
   if(med&&med<1500) flags.push(["warn",`Answered in ${(med/1000).toFixed(1)} seconds on average, faster than the statements can be read properly.`]);
   if(maxrun>=10||sdev<0.6) flags.push(["warn",`Picked the same answer ${maxrun} times in a row. Pattern responding.`]);
   if((d.b||0)>=3) flags.push(["warn",`Left the page ${d.b} times during the test.`]);
@@ -55,9 +57,9 @@ export function score(d){
   let band,bandCls,meaning;
   if(validity==="Invalid"){band="No decision";bandCls="bad";meaning="The answers cannot be trusted. Do not read the trait bars as facts. Re administer once with a warning, or decide on the role play and interview alone.";}
   else if(isMgr&&hy>=3.5){band="Decline for manager role";bandCls="bad";meaning="Individual drive is fine but the win at any cost pattern damages teams. Consider for an agent role only.";}
-  else if(effComp>=4.2&&hy<2.5&&sj>=7){band="Strong fit";bandCls="ok";meaning="Profile matches the champion pattern on the self report, the forced choices and the situational judgement. Advance. Use the interview to check the story behind the scores.";}
-  else if(effComp>=3.7&&hy<3.0&&sj>=5){band="Probable fit";bandCls="ok";meaning="Most of the profile is there. Advance and probe the weakest trait in the interview.";}
+  else if(effComp>=4.2&&hy<2.5&&sj>=SJKEY.length*2*0.7){band="Strong fit";bandCls="ok";meaning="Profile matches the champion pattern on the self report, the forced choices and the situational judgement. Advance. Use the interview to check the story behind the scores.";}
+  else if(effComp>=3.7&&hy<3.0&&sj>=SJKEY.length*2*0.5){band="Probable fit";bandCls="ok";meaning="Most of the profile is there. Advance and probe the weakest trait in the interview.";}
   else if(effComp>=3.2){band="Uncertain";bandCls="warn";meaning="The questionnaire does not separate this candidate either way. Let the role play and interview decide.";}
   else{band="Unlikely fit";bandCls="bad";meaning="Profile sits well below the champion pattern. Decline unless the role play is unusually strong.";}
-  return {scales,comp,effComp,sd,fc,sj,at,cons,maxrun,sdev:+sdev.toFixed(2),med,gap,flags,validity,band,bandCls,meaning,isMgr,compKeys};
+  return {scales,comp,effComp,sd,sdTotal,atTotal,fc,sj,at,cons,maxrun,sdev:+sdev.toFixed(2),med,gap,flags,validity,band,bandCls,meaning,isMgr,compKeys};
 }
